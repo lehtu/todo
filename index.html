@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .task-item {
+            transition: all 0.3s ease;
+        }
+        .progress-circle {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            border: 2px solid #d1d5db;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        .progress-circle.filled {
+            background: #10b981;
+            border-color: #10b981;
+        }
+        .section-container {
+            transition: all 0.3s ease;
+        }
+        .section-header {
+            cursor: move;
+        }
+        .section-container.dragging {
+            opacity: 0.5;
+            transform: translateY(-2px) rotate(5deg);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .section-container.drag-over {
+            transform: scale(1.02);
+            box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.3);
+            border: 2px dashed #3b82f6;
+        }
+        .drag-handle {
+            opacity: 0.3;
+            transition: opacity 0.2s ease;
+        }
+        .section-header:hover .drag-handle {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+    <div class="max-w-2xl mx-auto">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">✨ My Todo List</h1>
+            <p class="text-gray-600">Organize your tasks by category and track progress!</p>
+            <p class="text-sm text-gray-500 mt-2">💡 Drag section headers to reorder them</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <div class="grid grid-cols-4 gap-4 text-center">
+                <div>
+                    <div class="text-2xl font-bold text-blue-600" id="totalTasks">0</div>
+                    <div class="text-sm text-gray-500">Total Tasks</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-green-600" id="completedTasks">0</div>
+                    <div class="text-sm text-gray-500">Completed</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-emerald-600" id="progressComplete">0</div>
+                    <div class="text-sm text-gray-500">Progress Done</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-yellow-600" id="bonusPoints">0</div>
+                    <div class="text-sm text-gray-500">Total Steps</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+            <label for="categorySelect" class="block text-sm font-medium text-gray-700 mb-2">
+                Category
+            </label>
+            <select id="categorySelect" class="w-full p-2 mb-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="home">🏠 Home</option>
+                <option value="work">💼 Work</option>
+                <option value="other">📝 Other</option>
+            </select>
+
+            <label for="taskInput" class="block text-sm font-medium text-gray-700 mb-2">
+                Add Tasks (one per line)
+            </label>
+            <textarea 
+                id="taskInput" 
+                placeholder="Paste your tasks here, each on a new line:&#10;• Buy groceries&#10;• Walk the dog&#10;• Finish project report&#10;• Call mom"
+                class="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                rows="4"
+            ></textarea>
+            <button 
+                id="addTasksBtn"
+                class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+            >
+                Add Tasks
+            </button>
+        </div>
+
+        <!-- Sections Container -->
+        <div id="sectionsContainer">
+            <!-- Sections will be rendered here by JavaScript -->
+        </div>
+
+        <!-- Clear All Button -->
+        <div class="text-center mt-6">
+            <button 
+                id="clearAllBtn"
+                class="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors duration-200 opacity-50"
+                disabled
+            >
+                Clear All Tasks
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class TodoApp {
+            constructor() {
+                this.tasks = [];
+                this.taskIdCounter = 1;
+                this.sectionOrder = ['home', 'work', 'other'];
+                this.sectionConfig = {
+                    home: { title: '🏠 Home Tasks', bgColor: 'bg-blue-50' },
+                    work: { title: '💼 Work Tasks', bgColor: 'bg-green-50' },
+                    other: { title: '📝 Other Tasks', bgColor: 'bg-yellow-50' }
+                };
+                this.initializeElements();
+                this.loadState();
+                this.attachEventListeners();
+                this.updateStats();
+                this.renderSections();
+            }
+
+            initializeElements() {
+                this.taskInput = document.getElementById('taskInput');
+                this.categorySelect = document.getElementById('categorySelect');
+                this.addTasksBtn = document.getElementById('addTasksBtn');
+                this.sectionsContainer = document.getElementById('sectionsContainer');
+                this.clearAllBtn = document.getElementById('clearAllBtn');
+                this.totalTasks = document.getElementById('totalTasks');
+                this.completedTasks = document.getElementById('completedTasks');
+                this.progressComplete = document.getElementById('progressComplete');
+                this.bonusPoints = document.getElementById('bonusPoints');
+            }
+
+            attachEventListeners() {
+                this.addTasksBtn.addEventListener('click', () => this.addTasks());
+                this.clearAllBtn.addEventListener('click', () => this.clearAllTasks());
+                
+                // Allow Enter + Ctrl/Cmd to add tasks
+                this.taskInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                        e.preventDefault();
+                        this.addTasks();
+                    }
+                });
+            }
+
+            addTasks() {
+                const input = this.taskInput.value.trim();
+                const selectedCategory = this.categorySelect.value;
+                if (!input) return;
+
+                const lines = input.split('\n').map(line => line.trim()).filter(line => line);
+                
+                lines.forEach(line => {
+                    const cleanLine = line.replace(/^[\d\-\*\•\.]+\s*/, '').trim();
+                    if (cleanLine) {
+                        this.tasks.push({
+                            id: this.taskIdCounter++,
+                            text: cleanLine,
+                            completed: false,
+                            progress: 0,
+                            category: selectedCategory
+                        });
+                    }
+                });
+
+                this.taskInput.value = '';
+                this.renderSections();
+                this.updateStats();
+                this.saveState();
+            }
+
+            renderSections() {
+                if (this.tasks.length === 0) {
+                    this.clearAllBtn.disabled = true;
+                    this.clearAllBtn.classList.add('opacity-50');
+                } else {
+                    this.clearAllBtn.disabled = false;
+                    this.clearAllBtn.classList.remove('opacity-50');
+                }
+
+                let sectionsHTML = '';
+
+                this.sectionOrder.forEach(category => {
+                    const config = this.sectionConfig[category];
+                    sectionsHTML += `
+                        <div class="section-container bg-white rounded-xl shadow-lg overflow-hidden mb-6"
+                             data-section="${category}">
+                            <div class="section-header p-4 border-b border-gray-200 ${config.bgColor} flex justify-between items-center"
+                                 draggable="true">
+                                <div class="flex items-center space-x-2">
+                                    <div class="drag-handle">⋮⋮</div>
+                                    <h2 class="text-lg font-semibold text-gray-800">${config.title}</h2>
+                                </div>
+                                <label class="flex items-center space-x-2 text-sm">
+                                    <input type="checkbox" id="hideCompleted${category.charAt(0).toUpperCase() + category.slice(1)}" class="rounded">
+                                    <span class="text-gray-600">Hide completed</span>
+                                </label>
+                            </div>
+                            <div id="${category}TaskList" class="divide-y divide-gray-100">
+                                <!-- Tasks will be rendered here -->
+                            </div>
+                        </div>
+                    `;
+                });
+
+                this.sectionsContainer.innerHTML = sectionsHTML;
+
+                // Attach drag event listeners to section headers
+                this.attachSectionDragListeners();
+
+                // Attach hide completed event listeners
+                this.sectionOrder.forEach(category => {
+                    const hideCheckbox = document.getElementById(`hideCompleted${category.charAt(0).toUpperCase() + category.slice(1)}`);
+                    if (hideCheckbox) {
+                        hideCheckbox.addEventListener('change', () => this.renderTasks());
+                    }
+                });
+
+                // Render tasks in each section
+                this.renderTasks();
+            }
+
+            attachSectionDragListeners() {
+                const sections = document.querySelectorAll('.section-container');
+                const headers = document.querySelectorAll('.section-header');
+
+                headers.forEach((header, index) => {
+                    const section = sections[index];
+
+                    header.addEventListener('dragstart', (e) => this.handleSectionDragStart(e, section));
+
+                    // Add drag listeners to sections for drop zones
+                    section.addEventListener('dragover', (e) => this.handleSectionDragOver(e));
+                    section.addEventListener('drop', (e) => this.handleSectionDrop(e));
+                    section.addEventListener('dragend', (e) => this.handleSectionDragEnd(e));
+                    section.addEventListener('dragenter', (e) => e.preventDefault());
+                });
+            }
+
+            renderTasks() {
+                this.sectionOrder.forEach(category => {
+                    const listElement = document.getElementById(`${category}TaskList`);
+                    const hideCompletedId = `hideCompleted${category.charAt(0).toUpperCase() + category.slice(1)}`;
+                    this.renderCategoryTasks(category, listElement, hideCompletedId);
+                });
+            }
+
+            renderCategoryTasks(category, listElement, hideCompletedId) {
+                const categoryTasks = this.tasks.filter(task => task.category === category);
+                const hideCompletedCheckbox = document.getElementById(hideCompletedId);
+                const hideCompleted = hideCompletedCheckbox ? hideCompletedCheckbox.checked : false;
+                const visibleTasks = hideCompleted ? categoryTasks.filter(task => !task.completed) : categoryTasks;
+
+                if (visibleTasks.length === 0) {
+                    const categoryNames = { home: 'home', work: 'work', other: 'other' };
+                    listElement.innerHTML = `
+                        <div class="p-4 text-center text-gray-500 text-sm">
+                            No ${categoryNames[category]} tasks yet
+                        </div>
+                    `;
+                    return;
+                }
+
+                let tasksHTML = '';
+                
+                visibleTasks.forEach(task => {
+                    let circlesHTML = '';
+                    for (let i = 1; i <= 5; i++) {
+                        const isFilled = i <= task.progress;
+                        circlesHTML += `<div class="progress-circle ${isFilled ? 'filled' : ''}"></div>`;
+                    }
+                    
+                    tasksHTML += `
+                        <div class="task-item p-4 ${task.completed ? 'bg-gray-50' : ''}">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3 flex-1">
+                                    <input 
+                                        type="checkbox" 
+                                        ${task.completed ? 'checked' : ''} 
+                                        class="h-5 w-5 text-blue-600 flex-shrink-0"
+                                        onchange="todoApp.toggleTask(${task.id})"
+                                    >
+                                    <span class="text-lg ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'} flex-1">${task.text}</span>
+
+                                    <div class="flex items-center space-x-2">
+                                        <div class="flex items-center space-x-1">
+                                            ${circlesHTML}
+                                        </div>
+                                        <button
+                                            class="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white w-7 h-7 rounded-full text-sm font-bold transition-colors duration-200 flex-shrink-0"
+                                            onclick="todoApp.addProgress(${task.id})"
+                                            ${task.progress >= 5 ? 'disabled' : ''}
+                                        >+</button>
+                                        ${task.progress === 5 ? '<span class="text-green-600 font-bold text-sm">✅</span>' : ''}
+                                    </div>
+                                </div>
+                                <button 
+                                    class="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full text-sm ml-3 flex-shrink-0"
+                                    onclick="todoApp.deleteTask(${task.id})"
+                                >×</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                listElement.innerHTML = tasksHTML;
+            }
+
+            toggleTask(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task) {
+                    task.completed = !task.completed;
+                    this.renderTasks();
+                    this.updateStats();
+                    this.saveState();
+                }
+            }
+
+            addProgress(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task && task.progress < 5) {
+                    task.progress++;
+                    
+                    if (task.progress === 5) {
+                        task.completed = true;
+                    }
+                    
+                    this.renderTasks();
+                    this.updateStats();
+                    this.saveState();
+                }
+            }
+
+            deleteTask(taskId) {
+                const task = this.tasks.find(t => t.id === taskId);
+                if (task && confirm(`Are you sure you want to delete "${task.text}"?`)) {
+                    this.tasks = this.tasks.filter(t => t.id !== taskId);
+                    this.renderTasks();
+                    this.updateStats();
+                    this.saveState();
+                }
+            }
+
+            clearAllTasks() {
+                if (confirm('Are you sure you want to clear all tasks?')) {
+                    this.tasks = [];
+                    this.renderTasks();
+                    this.updateStats();
+                    this.saveState();
+                }
+            }
+
+            saveState() {
+                try {
+                    localStorage.setItem('todoApp_tasks', JSON.stringify(this.tasks));
+                    localStorage.setItem('todoApp_counter', this.taskIdCounter.toString());
+                    localStorage.setItem('todoApp_sectionOrder', JSON.stringify(this.sectionOrder));
+                } catch (e) {
+                    console.log('Could not save to localStorage:', e);
+                }
+            }
+
+            loadState() {
+                try {
+                    const savedTasks = localStorage.getItem('todoApp_tasks');
+                    const savedCounter = localStorage.getItem('todoApp_counter');
+                    const savedOrder = localStorage.getItem('todoApp_sectionOrder');
+
+                    if (savedTasks) {
+                        this.tasks = JSON.parse(savedTasks);
+                        // Add category to existing tasks that don't have it
+                        this.tasks.forEach(task => {
+                            if (!task.category) {
+                                task.category = 'other';
+                            }
+                        });
+                    }
+
+                    if (savedCounter) {
+                        this.taskIdCounter = parseInt(savedCounter);
+                    }
+
+                    if (savedOrder) {
+                        this.sectionOrder = JSON.parse(savedOrder);
+                    }
+                } catch (e) {
+                    console.log('Could not load from localStorage:', e);
+                    this.tasks = [];
+                    this.taskIdCounter = 1;
+                    this.sectionOrder = ['home', 'work', 'other'];
+                }
+            }
+
+            updateStats() {
+                const total = this.tasks.length;
+                const completed = this.tasks.filter(t => t.completed).length;
+                const progressComplete = this.tasks.filter(t => t.progress >= 5).length;
+                const totalSteps = this.tasks.reduce((sum, t) => sum + t.progress, 0);
+
+                this.totalTasks.textContent = total;
+                this.completedTasks.textContent = completed;
+                this.progressComplete.textContent = progressComplete;
+                this.bonusPoints.textContent = totalSteps;
+            }
+
+            // Section Drag and Drop Methods
+            handleSectionDragStart(event, section) {
+                this.draggedSection = section.getAttribute('data-section');
+                section.classList.add('dragging');
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/html', section.outerHTML);
+            }
+
+            handleSectionDragOver(event) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+
+                const section = event.currentTarget;
+                if (section && !section.classList.contains('dragging')) {
+                    // Remove drag-over from all sections
+                    document.querySelectorAll('.section-container').forEach(s => {
+                        s.classList.remove('drag-over');
+                    });
+                    section.classList.add('drag-over');
+                }
+            }
+
+            handleSectionDrop(event) {
+                event.preventDefault();
+                const targetSection = event.currentTarget.getAttribute('data-section');
+
+                if (this.draggedSection && targetSection && this.draggedSection !== targetSection) {
+                    this.reorderSections(this.draggedSection, targetSection);
+                }
+
+                // Clean up
+                document.querySelectorAll('.section-container').forEach(section => {
+                    section.classList.remove('drag-over');
+                });
+            }
+
+            handleSectionDragEnd(event) {
+                // Find the section being dragged
+                const section = document.querySelector('.section-container.dragging');
+                if (section) {
+                    section.classList.remove('dragging');
+                }
+                this.draggedSection = null;
+
+                // Clean up any remaining drag-over classes
+                document.querySelectorAll('.section-container').forEach(section => {
+                    section.classList.remove('drag-over');
+                });
+            }
+
+            reorderSections(draggedSection, targetSection) {
+                const draggedIndex = this.sectionOrder.indexOf(draggedSection);
+                const targetIndex = this.sectionOrder.indexOf(targetSection);
+
+                if (draggedIndex !== -1 && targetIndex !== -1) {
+                    // Remove the dragged section
+                    this.sectionOrder.splice(draggedIndex, 1);
+                    // Insert it at the target position
+                    this.sectionOrder.splice(targetIndex, 0, draggedSection);
+
+                    this.renderSections();
+                    this.saveState();
+                }
+            }
+        }
+
+        const todoApp = new TodoApp();
+    </script>
+</body>
+</html>
