@@ -133,6 +133,11 @@
                     work: { title: '💼 Work Tasks', bgColor: 'bg-green-50' },
                     other: { title: '📝 Other Tasks', bgColor: 'bg-yellow-50' }
                 };
+                this.hideCompletedState = {
+                    home: false,
+                    work: false,
+                    other: false
+                };
                 this.initializeElements();
                 this.loadState();
                 this.attachEventListeners();
@@ -191,7 +196,7 @@
                 this.saveState();
             }
 
-            renderSections() {
+            updateClearAllButton() {
                 if (this.tasks.length === 0) {
                     this.clearAllBtn.disabled = true;
                     this.clearAllBtn.classList.add('opacity-50');
@@ -199,11 +204,16 @@
                     this.clearAllBtn.disabled = false;
                     this.clearAllBtn.classList.remove('opacity-50');
                 }
+            }
+
+            renderSections() {
+                this.updateClearAllButton();
 
                 let sectionsHTML = '';
 
                 this.sectionOrder.forEach(category => {
                     const config = this.sectionConfig[category];
+                    const isChecked = this.hideCompletedState[category] ? 'checked' : '';
                     sectionsHTML += `
                         <div class="section-container bg-white rounded-xl shadow-lg overflow-hidden mb-6"
                              data-section="${category}">
@@ -214,7 +224,7 @@
                                     <h2 class="text-lg font-semibold text-gray-800">${config.title}</h2>
                                 </div>
                                 <label class="flex items-center space-x-2 text-sm">
-                                    <input type="checkbox" id="hideCompleted${category.charAt(0).toUpperCase() + category.slice(1)}" class="rounded">
+                                    <input type="checkbox" id="hideCompleted${category.charAt(0).toUpperCase() + category.slice(1)}" class="rounded" ${isChecked}>
                                     <span class="text-gray-600">Hide completed</span>
                                 </label>
                             </div>
@@ -234,7 +244,11 @@
                 this.sectionOrder.forEach(category => {
                     const hideCheckbox = document.getElementById(`hideCompleted${category.charAt(0).toUpperCase() + category.slice(1)}`);
                     if (hideCheckbox) {
-                        hideCheckbox.addEventListener('change', () => this.renderTasks());
+                        hideCheckbox.addEventListener('change', () => {
+                            this.hideCompletedState[category] = hideCheckbox.checked;
+                            this.saveState();
+                            this.renderTasks();
+                        });
                     }
                 });
 
@@ -332,6 +346,12 @@
                 const task = this.tasks.find(t => t.id === taskId);
                 if (task) {
                     task.completed = !task.completed;
+
+                    // If unchecking a task with full progress, reset progress
+                    if (!task.completed && task.progress === 5) {
+                        task.progress = 0;
+                    }
+
                     this.renderTasks();
                     this.updateStats();
                     this.saveState();
@@ -359,6 +379,7 @@
                     this.tasks = this.tasks.filter(t => t.id !== taskId);
                     this.renderTasks();
                     this.updateStats();
+                    this.updateClearAllButton();
                     this.saveState();
                 }
             }
@@ -368,6 +389,7 @@
                     this.tasks = [];
                     this.renderTasks();
                     this.updateStats();
+                    this.updateClearAllButton();
                     this.saveState();
                 }
             }
@@ -377,6 +399,7 @@
                     localStorage.setItem('todoApp_tasks', JSON.stringify(this.tasks));
                     localStorage.setItem('todoApp_counter', this.taskIdCounter.toString());
                     localStorage.setItem('todoApp_sectionOrder', JSON.stringify(this.sectionOrder));
+                    localStorage.setItem('todoApp_hideCompleted', JSON.stringify(this.hideCompletedState));
                 } catch (e) {
                     console.log('Could not save to localStorage:', e);
                 }
@@ -387,6 +410,7 @@
                     const savedTasks = localStorage.getItem('todoApp_tasks');
                     const savedCounter = localStorage.getItem('todoApp_counter');
                     const savedOrder = localStorage.getItem('todoApp_sectionOrder');
+                    const savedHideCompleted = localStorage.getItem('todoApp_hideCompleted');
 
                     if (savedTasks) {
                         this.tasks = JSON.parse(savedTasks);
@@ -405,11 +429,16 @@
                     if (savedOrder) {
                         this.sectionOrder = JSON.parse(savedOrder);
                     }
+
+                    if (savedHideCompleted) {
+                        this.hideCompletedState = JSON.parse(savedHideCompleted);
+                    }
                 } catch (e) {
                     console.log('Could not load from localStorage:', e);
                     this.tasks = [];
                     this.taskIdCounter = 1;
                     this.sectionOrder = ['home', 'work', 'other'];
+                    this.hideCompletedState = { home: false, work: false, other: false };
                 }
             }
 
