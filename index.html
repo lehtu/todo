@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todo List</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     <style>
         .task-item {
             transition: all 0.3s ease;
@@ -16,6 +21,10 @@
             border: 2px solid #d1d5db;
             background: white;
             transition: all 0.3s ease;
+        }
+        .dark .progress-circle {
+            border-color: #4b5563;
+            background: #1f2937;
         }
         .progress-circle.filled {
             background: #10b981;
@@ -46,66 +55,69 @@
         }
     </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen p-4">
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-slate-800 min-h-screen p-4 transition-colors duration-300">
     <div class="max-w-2xl mx-auto">
         <!-- Header -->
         <div class="text-center mb-8">
-            <h1 class="text-4xl font-bold text-gray-800 mb-2">✨ My Todo List</h1>
-            <p class="text-gray-600">Organize your tasks by category and track progress!</p>
-            <div class="flex items-center justify-center gap-4 mt-4">
-                <p class="text-sm text-gray-500">💡 Drag section headers to reorder them</p>
+            <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2">✨ My Todo List</h1>
+            <p class="text-gray-600 dark:text-gray-300">Organize your tasks by category and track progress!</p>
+            <div class="flex items-center justify-center gap-4 mt-4 flex-wrap">
+                <p class="text-sm text-gray-500 dark:text-gray-400">💡 Drag section headers to reorder them</p>
                 <label class="flex items-center space-x-2 text-sm cursor-pointer">
                     <input type="checkbox" id="globalHideCompleted" class="rounded cursor-pointer">
-                    <span class="text-gray-600 font-medium">Hide completed tasks</span>
+                    <span class="text-gray-600 dark:text-gray-300 font-medium">Hide completed tasks</span>
                 </label>
+                <button id="darkModeToggle" class="flex items-center space-x-2 text-sm px-3 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg transition-colors duration-200">
+                    <span class="text-gray-600 dark:text-gray-300 font-medium">🌙 Dark Mode</span>
+                </button>
             </div>
         </div>
 
         <!-- Stats -->
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 transition-colors duration-300">
             <div class="grid grid-cols-4 gap-4 text-center">
                 <div>
-                    <div class="text-2xl font-bold text-blue-600" id="totalTasks">0</div>
-                    <div class="text-sm text-gray-500">Total Tasks</div>
+                    <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" id="totalTasks">0</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Total Tasks</div>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-green-600" id="completedTasks">0</div>
-                    <div class="text-sm text-gray-500">Completed</div>
+                    <div class="text-2xl font-bold text-green-600 dark:text-green-400" id="completedTasks">0</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Completed</div>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-emerald-600" id="progressComplete">0</div>
-                    <div class="text-sm text-gray-500">Progress Done</div>
+                    <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400" id="progressComplete">0</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Progress Done</div>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-yellow-600" id="bonusPoints">0</div>
-                    <div class="text-sm text-gray-500">Total Steps</div>
+                    <div class="text-2xl font-bold text-yellow-600 dark:text-yellow-400" id="bonusPoints">0</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">Total Steps</div>
                 </div>
             </div>
         </div>
 
         <!-- Input Section -->
-        <div class="bg-white rounded-xl shadow-lg p-6 mb-6">
-            <label for="categorySelect" class="block text-sm font-medium text-gray-700 mb-2">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-6 transition-colors duration-300">
+            <label for="categorySelect" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Category
             </label>
-            <select id="categorySelect" class="w-full p-2 mb-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+            <select id="categorySelect" class="w-full p-2 mb-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                 <option value="home">🏠 Home</option>
                 <option value="work">💼 Work</option>
                 <option value="other">📝 Other</option>
             </select>
 
-            <label for="taskInput" class="block text-sm font-medium text-gray-700 mb-2">
+            <label for="taskInput" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Add Tasks (one per line)
             </label>
-            <textarea 
-                id="taskInput" 
+            <textarea
+                id="taskInput"
                 placeholder="Paste your tasks here, each on a new line:&#10;• Buy groceries&#10;• Walk the dog&#10;• Finish project report&#10;• Call mom"
-                class="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 rows="4"
             ></textarea>
-            <button 
+            <button
                 id="addTasksBtn"
-                class="mt-3 w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
+                class="mt-3 w-full bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-lg transition-colors duration-200"
             >
                 Add Tasks
             </button>
@@ -118,9 +130,9 @@
 
         <!-- Clear All Button -->
         <div class="text-center mt-6">
-            <button 
+            <button
                 id="clearAllBtn"
-                class="px-6 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors duration-200 opacity-50"
+                class="px-6 py-2 bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white font-medium rounded-lg transition-colors duration-200 opacity-50"
                 disabled
             >
                 Clear All Tasks
@@ -135,11 +147,12 @@
                 this.taskIdCounter = 1;
                 this.sectionOrder = ['home', 'work', 'other'];
                 this.sectionConfig = {
-                    home: { title: '🏠 Home Tasks', bgColor: 'bg-blue-50' },
-                    work: { title: '💼 Work Tasks', bgColor: 'bg-green-50' },
-                    other: { title: '📝 Other Tasks', bgColor: 'bg-yellow-50' }
+                    home: { title: '🏠 Home Tasks', bgColor: 'bg-blue-50 dark:bg-blue-900/30' },
+                    work: { title: '💼 Work Tasks', bgColor: 'bg-green-50 dark:bg-green-900/30' },
+                    other: { title: '📝 Other Tasks', bgColor: 'bg-yellow-50 dark:bg-yellow-900/30' }
                 };
                 this.hideCompleted = false;
+                this.darkMode = false;
                 this.initializeElements();
                 this.loadState();
                 this.attachEventListeners();
@@ -158,6 +171,7 @@
                 this.progressComplete = document.getElementById('progressComplete');
                 this.bonusPoints = document.getElementById('bonusPoints');
                 this.globalHideCompleted = document.getElementById('globalHideCompleted');
+                this.darkModeToggle = document.getElementById('darkModeToggle');
             }
 
             attachEventListeners() {
@@ -169,6 +183,13 @@
                     this.hideCompleted = this.globalHideCompleted.checked;
                     this.saveState();
                     this.renderTasks();
+                });
+
+                // Dark mode toggle
+                this.darkModeToggle.addEventListener('click', () => {
+                    this.darkMode = !this.darkMode;
+                    this.applyDarkMode();
+                    this.saveState();
                 });
 
                 // Allow Enter + Ctrl/Cmd to add tasks
@@ -224,16 +245,16 @@
                 this.sectionOrder.forEach(category => {
                     const config = this.sectionConfig[category];
                     sectionsHTML += `
-                        <div class="section-container bg-white rounded-xl shadow-lg overflow-hidden mb-6"
+                        <div class="section-container bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mb-6 transition-colors duration-300"
                              data-section="${category}">
-                            <div class="section-header p-4 border-b border-gray-200 ${config.bgColor} flex justify-between items-center"
+                            <div class="section-header p-4 border-b border-gray-200 dark:border-gray-700 ${config.bgColor} flex justify-between items-center"
                                  draggable="true">
                                 <div class="flex items-center space-x-2">
                                     <div class="drag-handle">⋮⋮</div>
-                                    <h2 class="text-lg font-semibold text-gray-800">${config.title}</h2>
+                                    <h2 class="text-lg font-semibold text-gray-800 dark:text-gray-100">${config.title}</h2>
                                 </div>
                             </div>
-                            <div id="${category}TaskList" class="divide-y divide-gray-100">
+                            <div id="${category}TaskList" class="divide-y divide-gray-100 dark:divide-gray-700">
                                 <!-- Tasks will be rendered here -->
                             </div>
                         </div>
@@ -280,7 +301,7 @@
                 if (visibleTasks.length === 0) {
                     const categoryNames = { home: 'home', work: 'work', other: 'other' };
                     listElement.innerHTML = `
-                        <div class="p-4 text-center text-gray-500 text-sm">
+                        <div class="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">
                             No ${categoryNames[category]} tasks yet
                         </div>
                     `;
@@ -297,31 +318,31 @@
                     }
                     
                     tasksHTML += `
-                        <div class="task-item p-4 ${task.completed ? 'bg-gray-50' : ''}">
+                        <div class="task-item p-4 ${task.completed ? 'bg-gray-50 dark:bg-gray-700/50' : ''}">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center space-x-3 flex-1">
-                                    <input 
-                                        type="checkbox" 
-                                        ${task.completed ? 'checked' : ''} 
-                                        class="h-5 w-5 text-blue-600 flex-shrink-0"
+                                    <input
+                                        type="checkbox"
+                                        ${task.completed ? 'checked' : ''}
+                                        class="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0"
                                         onchange="todoApp.toggleTask(${task.id})"
                                     >
-                                    <span class="text-lg ${task.completed ? 'line-through text-gray-500' : 'text-gray-800'} flex-1">${task.text}</span>
+                                    <span class="text-lg ${task.completed ? 'line-through text-gray-500 dark:text-gray-400' : 'text-gray-800 dark:text-gray-200'} flex-1">${task.text}</span>
 
                                     <div class="flex items-center space-x-2">
                                         <div class="flex items-center space-x-1">
                                             ${circlesHTML}
                                         </div>
                                         <button
-                                            class="bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white w-7 h-7 rounded-full text-sm font-bold transition-colors duration-200 flex-shrink-0"
+                                            class="bg-yellow-500 hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700 disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed text-white w-7 h-7 rounded-full text-sm font-bold transition-colors duration-200 flex-shrink-0"
                                             onclick="todoApp.addProgress(${task.id})"
                                             ${task.progress >= 5 ? 'disabled' : ''}
                                         >+</button>
-                                        ${task.progress === 5 ? '<span class="text-green-600 font-bold text-sm">✅</span>' : ''}
+                                        ${task.progress === 5 ? '<span class="text-green-600 dark:text-green-400 font-bold text-sm">✅</span>' : ''}
                                     </div>
                                 </div>
-                                <button 
-                                    class="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-full text-sm ml-3 flex-shrink-0"
+                                <button
+                                    class="bg-red-500 hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700 text-white w-8 h-8 rounded-full text-sm ml-3 flex-shrink-0"
                                     onclick="todoApp.deleteTask(${task.id})"
                                 >×</button>
                             </div>
@@ -384,12 +405,23 @@
                 }
             }
 
+            applyDarkMode() {
+                if (this.darkMode) {
+                    document.documentElement.classList.add('dark');
+                    this.darkModeToggle.querySelector('span').textContent = '☀️ Light Mode';
+                } else {
+                    document.documentElement.classList.remove('dark');
+                    this.darkModeToggle.querySelector('span').textContent = '🌙 Dark Mode';
+                }
+            }
+
             saveState() {
                 try {
                     localStorage.setItem('todoApp_tasks', JSON.stringify(this.tasks));
                     localStorage.setItem('todoApp_counter', this.taskIdCounter.toString());
                     localStorage.setItem('todoApp_sectionOrder', JSON.stringify(this.sectionOrder));
                     localStorage.setItem('todoApp_hideCompleted', JSON.stringify(this.hideCompleted));
+                    localStorage.setItem('todoApp_darkMode', JSON.stringify(this.darkMode));
                 } catch (e) {
                     console.log('Could not save to localStorage:', e);
                 }
@@ -401,6 +433,7 @@
                     const savedCounter = localStorage.getItem('todoApp_counter');
                     const savedOrder = localStorage.getItem('todoApp_sectionOrder');
                     const savedHideCompleted = localStorage.getItem('todoApp_hideCompleted');
+                    const savedDarkMode = localStorage.getItem('todoApp_darkMode');
 
                     if (savedTasks) {
                         this.tasks = JSON.parse(savedTasks);
@@ -427,12 +460,18 @@
                             this.globalHideCompleted.checked = this.hideCompleted;
                         }
                     }
+
+                    if (savedDarkMode !== null) {
+                        this.darkMode = JSON.parse(savedDarkMode);
+                        this.applyDarkMode();
+                    }
                 } catch (e) {
                     console.log('Could not load from localStorage:', e);
                     this.tasks = [];
                     this.taskIdCounter = 1;
                     this.sectionOrder = ['home', 'work', 'other'];
                     this.hideCompleted = false;
+                    this.darkMode = false;
                 }
             }
 
