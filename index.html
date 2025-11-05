@@ -53,6 +53,27 @@
         .section-header:hover .drag-handle {
             opacity: 1;
         }
+        .task-item {
+            cursor: move;
+        }
+        .task-item.dragging {
+            opacity: 0.5;
+            transform: translateY(-2px) rotate(2deg);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        .task-item.drag-over {
+            transform: scale(1.02);
+            box-shadow: 0 10px 25px -5px rgba(59, 130, 246, 0.3);
+            border-left: 3px solid #3b82f6;
+        }
+        .task-drag-handle {
+            opacity: 0.3;
+            transition: opacity 0.2s ease;
+            cursor: move;
+        }
+        .task-item:hover .task-drag-handle {
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-slate-800 min-h-screen p-4 transition-colors duration-300">
@@ -62,7 +83,7 @@
             <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2">✨ My Todo List</h1>
             <p class="text-gray-600 dark:text-gray-300">Organize your tasks by category and track progress!</p>
             <div class="flex items-center justify-center gap-4 mt-4 flex-wrap">
-                <p class="text-sm text-gray-500 dark:text-gray-400">💡 Drag section headers to reorder them</p>
+                <p class="text-sm text-gray-500 dark:text-gray-400">💡 Drag sections and tasks to reorder them</p>
                 <label class="flex items-center space-x-2 text-sm cursor-pointer">
                     <input type="checkbox" id="globalHideCompleted" class="rounded cursor-pointer">
                     <span class="text-gray-600 dark:text-gray-300 font-medium">Hide completed tasks</span>
@@ -316,11 +337,14 @@
                         const isFilled = i <= task.progress;
                         circlesHTML += `<div class="progress-circle ${isFilled ? 'filled' : ''}"></div>`;
                     }
-                    
+
                     tasksHTML += `
-                        <div class="task-item p-4 ${task.completed ? 'bg-gray-50 dark:bg-gray-700/50' : ''}">
+                        <div class="task-item p-4 ${task.completed ? 'bg-gray-50 dark:bg-gray-700/50' : ''}"
+                             draggable="true"
+                             data-task-id="${task.id}">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center space-x-3 flex-1">
+                                    <div class="task-drag-handle text-gray-400 dark:text-gray-500 flex-shrink-0">⋮⋮</div>
                                     <input
                                         type="checkbox"
                                         ${task.completed ? 'checked' : ''}
@@ -351,6 +375,9 @@
                 });
 
                 listElement.innerHTML = tasksHTML;
+
+                // Attach drag event listeners to tasks
+                this.attachTaskDragListeners(listElement);
             }
 
             toggleTask(taskId) {
@@ -548,6 +575,91 @@
                     this.sectionOrder.splice(targetIndex, 0, draggedSection);
 
                     this.renderSections();
+                    this.saveState();
+                }
+            }
+
+            // Task Drag and Drop Methods
+            attachTaskDragListeners(listElement) {
+                const taskItems = listElement.querySelectorAll('.task-item');
+
+                taskItems.forEach(taskItem => {
+                    taskItem.addEventListener('dragstart', (e) => this.handleTaskDragStart(e, taskItem));
+                    taskItem.addEventListener('dragover', (e) => this.handleTaskDragOver(e));
+                    taskItem.addEventListener('drop', (e) => this.handleTaskDrop(e));
+                    taskItem.addEventListener('dragend', (e) => this.handleTaskDragEnd(e));
+                    taskItem.addEventListener('dragenter', (e) => e.preventDefault());
+                });
+            }
+
+            handleTaskDragStart(event, taskItem) {
+                this.draggedTaskId = parseInt(taskItem.getAttribute('data-task-id'));
+                taskItem.classList.add('dragging');
+                event.dataTransfer.effectAllowed = 'move';
+                event.dataTransfer.setData('text/html', taskItem.outerHTML);
+            }
+
+            handleTaskDragOver(event) {
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'move';
+
+                const taskItem = event.currentTarget;
+                if (taskItem && !taskItem.classList.contains('dragging')) {
+                    // Remove drag-over from all tasks
+                    document.querySelectorAll('.task-item').forEach(t => {
+                        t.classList.remove('drag-over');
+                    });
+                    taskItem.classList.add('drag-over');
+                }
+            }
+
+            handleTaskDrop(event) {
+                event.preventDefault();
+                const targetTaskId = parseInt(event.currentTarget.getAttribute('data-task-id'));
+
+                if (this.draggedTaskId && targetTaskId && this.draggedTaskId !== targetTaskId) {
+                    this.reorderTasks(this.draggedTaskId, targetTaskId);
+                }
+
+                // Clean up
+                document.querySelectorAll('.task-item').forEach(taskItem => {
+                    taskItem.classList.remove('drag-over');
+                });
+            }
+
+            handleTaskDragEnd(event) {
+                // Find the task being dragged
+                const taskItem = document.querySelector('.task-item.dragging');
+                if (taskItem) {
+                    taskItem.classList.remove('dragging');
+                }
+                this.draggedTaskId = null;
+
+                // Clean up any remaining drag-over classes
+                document.querySelectorAll('.task-item').forEach(taskItem => {
+                    taskItem.classList.remove('drag-over');
+                });
+            }
+
+            reorderTasks(draggedTaskId, targetTaskId) {
+                const draggedTask = this.tasks.find(t => t.id === draggedTaskId);
+                const targetTask = this.tasks.find(t => t.id === targetTaskId);
+
+                // Only allow reordering within the same category
+                if (!draggedTask || !targetTask || draggedTask.category !== targetTask.category) {
+                    return;
+                }
+
+                const draggedIndex = this.tasks.indexOf(draggedTask);
+                const targetIndex = this.tasks.indexOf(targetTask);
+
+                if (draggedIndex !== -1 && targetIndex !== -1) {
+                    // Remove the dragged task
+                    this.tasks.splice(draggedIndex, 1);
+                    // Insert it at the target position
+                    this.tasks.splice(targetIndex, 0, draggedTask);
+
+                    this.renderTasks();
                     this.saveState();
                 }
             }
