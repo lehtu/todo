@@ -303,7 +303,6 @@
                     // Add drag listeners to sections for drop zones
                     section.addEventListener('dragover', (e) => this.handleSectionDragOver(e));
                     section.addEventListener('drop', (e) => this.handleSectionDrop(e));
-                    section.addEventListener('dragend', (e) => this.handleSectionDragEnd(e));
                     section.addEventListener('dragenter', (e) => e.preventDefault());
                 });
             }
